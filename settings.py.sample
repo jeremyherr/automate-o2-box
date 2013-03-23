@@ -1,0 +1,7 @@
+# Copy this file to settings.py,
+# edit it with your settings,
+# tell git to ignore settings.py.
+
+loginUrl = 'o2_box_web_admin_page'
+username = 'o2_box_username'
+password = 'o2_password'
