@@ -37,7 +37,7 @@ class RouterControl:
 		HA2 = hashlib.md5("GET" + ":" + jsVars['uri']).hexdigest()
 		return hashlib.md5(HA1 + ":" + jsVars['nonce'] + ":" + "00000001" + ":" + "xyz" + ":" + jsVars['qop'] + ":" + HA2).hexdigest()
 
-	def extractJavaScriptVars(self, html, wantedJSVars):
+	def extractJavaScriptVars(self, html, wantedJsVars):
 		"""Given page source, extract JavaScript variable values"""
 		foundJsVars = {}
 		regExpJsVar = re.compile(r"var\s+(\w+)\s*=\s*\"([^\"]+)\";")
@@ -53,6 +53,26 @@ class RouterControl:
 
 		return foundJsVars
 
+	def extractHtmlInputs(self, html, wantedHtmlVars):
+		"""Given page source, extract HTML input fields"""
+		foundHtmlVars = {}
+		regExpHtmlInput = re.compile(r"\<input\s+type\s*=\s*\"hidden\"\s+name\s*=\s*\"([^\"]+)\"\s+value\s*=\s*\"([^\"]+)\"\s*\>")
+		matches = re.findall(regExpHtmlInput, html)
+		if matches:
+			print "HTML input fields found"
+			for pair in matches:
+				if pair[0] in wantedHtmlVars:
+					print "%s: %s" % (pair[0], pair[1])
+					foundHtmlVars[pair[0]] = pair[1]
+		else:
+			print "no HTML input fields found"
+
+		return foundHtmlVars
+
+	def postLoginCredentials(self):
+		pass
+
 if __name__ == "__main__":
 	rc = RouterControl()
 	print rc.calculateHashes(rc.extractJavaScriptVars(rc.getLoginPage(), ['realm', 'nonce', 'qop', 'uri']))
+	print rc.extractHtmlInputs(rc.getLoginPage(), ['rn'])
