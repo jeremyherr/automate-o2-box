@@ -1,6 +1,7 @@
 import settings
 from urllib2 import Request, urlopen, HTTPError, HTTPCookieProcessor, install_opener, build_opener
 import hashlib
+import re
 
 class RouterControl:
 	"""Class for logging into O2 Wireless router and changing settings"""
@@ -14,7 +15,7 @@ class RouterControl:
 				setattr(self, s, getattr(settings, s))
 
 	def getLoginPage(self):
-
+		"""Retrieve the login page source"""
 		request = Request(self.loginUrl)
 
 		opener = build_opener(HTTPCookieProcessor())
@@ -30,13 +31,28 @@ class RouterControl:
 		except HTTPError, e:
 			error_message = str(e.code) + e.msg
 
-	def calculateHashes(self, realm, nonce, qop, uri):
+	def calculateHashes(self, jsVars):
 		"""Calculate the MD5 checksums that the in-page JavaScript uses to send password over http"""
-		HA1 = hashlib.md5(self.username + ":" + realm + ":" + self.password).hexdigest()
-		HA2 = hashlib.md5("GET" + ":" + uri).hexdigest()
-		return hashlib.md5(HA1 + ":" + nonce + ":" + "00000001" + ":" + "xyz" + ":" + qop + ":" + HA2).hexdigest()
+		HA1 = hashlib.md5(self.username + ":" + jsVars['realm'] + ":" + self.password).hexdigest()
+		HA2 = hashlib.md5("GET" + ":" + jsVars['uri']).hexdigest()
+		return hashlib.md5(HA1 + ":" + jsVars['nonce'] + ":" + "00000001" + ":" + "xyz" + ":" + jsVars['qop'] + ":" + HA2).hexdigest()
+
+	def extractJavaScriptVars(self, html, wantedJSVars):
+		"""Given page source, extract JavaScript variable values"""
+		foundJsVars = {}
+		regExpJsVar = re.compile(r"var\s+(\w+)\s*=\s*\"([^\"]+)\";")
+		matches = re.findall(regExpJsVar, html)
+		if matches:
+			print "JavaScript vars found"
+			for pair in matches:
+				if pair[0] in wantedJsVars:
+					print "%s: %s" % (pair[0], pair[1])
+					foundJsVars[pair[0]] = pair[1]
+		else:
+			print "no JavaScript vars found"
+
+		return foundJsVars
 
 if __name__ == "__main__":
 	rc = RouterControl()
-	print rc.getLoginPage()
-	print rc.calculateHashes("Technicolor Gateway", "1851954:341337:204731139790f1a60397421eea9eb90f", "auth", "/login.lp")
+	print rc.calculateHashes(rc.extractJavaScriptVars(rc.getLoginPage(), ['realm', 'nonce', 'qop', 'uri']))
